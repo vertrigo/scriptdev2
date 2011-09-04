@@ -257,13 +257,21 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
 
 // Phase Idle
     uint32 m_uiOrdersTimer;
-// Phase One
+
+// Phase One 
 
     void Reset()
     {
 // Special Timers and Stuff Reset
         m_uiPhase               = PHASE_IDLE;
+
+// Phase Idle
+        m_uiOrdersTimer        = 10000;
+
+// Phase One 
+        m_uiDecieverDead       = 0;
     }
+
     void Aggro(Unit* pWho)
     {
         m_creature->SetInCombatWithZone();
@@ -271,3 +279,87 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
         DoScriptText(SAY_EMERGE, m_creature);
         m_uiPhase = PHASE_ONE;
     }
+
+    void JustReachedHome()
+    {
+        if (m_pInstance)
+            m_pInstance->SetData(TYPE_KILJAEDEN, NOT_STARTED);
+            m_pInstance->SetData(TYPE_KILJAEDEN_PHASE, PHASE_IDLE);
+
+        if (Creature* pAnveena = m_pInstance->GetSingleCreatureFromStorage(NPC_ANVEENA))
+        {
+            if (!pAnveena->isAlive())
+                pAnveena->Respawn();
+        }
+
+        if (Creature* pController = m_pInstance->GetSingleCreatureFromStorage(NPC_KILJAEDEN_CONTROLLER))
+        {
+            if (pController->isAlive())
+                pController->AI()->EnterEvadeMode();
+        }
+
+        std::list<Creature*> lDecievers;
+        GetCreatureListWithEntryInGrid(lDecievers, m_creature, NPC_DECIVER, 40.0f);
+        if (!lDecievers.empty())
+        {
+            for(std::list<Creature*>::iterator iter = lDecievers.begin(); iter != lDecievers.end(); ++iter)
+            {
+                if ((*iter) && !(*iter)->isAlive())
+                   (*iter)->Respawn();
+            }
+        }
+    }
+
+    void KilledUnit(Unit* pVictim)
+    {
+        switch (rand()%2)
+        {
+            case 0: DoScriptText(SAY_SLAY1, m_creature); break;
+            case 1: DoScriptText(SAY_SLAY2, m_creature); break;
+        }
+    }
+
+    void JustDied(Unit* pKiller)
+    {
+        if (m_pInstance)
+        {
+            m_pInstance->SetData(TYPE_KILJAEDEN, DONE);
+            m_pInstance->SetData(TYPE_KILJAEDEN_PHASE, PHASE_OUTRO);
+        }
+    }
+
+    void UpdateAI(const uint32 uiDiff)
+    {
+        if (m_uiPhase == PHASE_IDLE)
+        {
+           if (m_uiOrdersTimer < uiDiff)
+            {
+                switch (rand()%5)
+                {
+                    case 0: DoScriptText(SAY_OFFCOMBAT1, m_creature); break;
+                    case 1: DoScriptText(SAY_OFFCOMBAT2, m_creature); break;
+                    case 2: DoScriptText(SAY_OFFCOMBAT3, m_creature); break;
+                    case 3: DoScriptText(SAY_OFFCOMBAT4, m_creature); break;
+                    case 4: DoScriptText(SAY_OFFCOMBAT5, m_creature); break;
+                }
+                m_uiOrdersTimer = 30000;
+            }
+            else m_uiOrdersTimer -= uiDiff;
+            // break;   // might be needed went know till play testing
+        }
+    }
+
+CreatureAI* GetAI_boss_kiljaeden(Creature *pCreature)
+{
+    return new boss_kiljaedenAI(pCreature);
+}
+
+void AddSC_boss_kiljaeden()
+{
+    Script *pNewScript;
+
+    pNewScript = new Script;
+    pNewScript->Name="boss_kiljaeden";
+    pNewScript->GetAI = &GetAI_boss_kiljaeden;
+    pNewScript->RegisterSelf();
+}
