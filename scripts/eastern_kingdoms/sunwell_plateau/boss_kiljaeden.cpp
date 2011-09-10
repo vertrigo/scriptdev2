@@ -354,6 +354,148 @@ CreatureAI* GetAI_boss_kiljaeden(Creature *pCreature)
     return new boss_kiljaedenAI(pCreature);
 }
 
+/*######
+## mob_deciever
+######*/
+
+struct MANGOS_DLL_DECL mob_deceiverAI : public ScriptedAI
+{
+    mob_deceiverAI(Creature* pCreature) : ScriptedAI(pCreature)
+    {
+        m_pInstance = ((ScriptedInstance*)pCreature->GetInstanceData());
+        Reset();
+    }
+
+    ScriptedInstance* m_pInstance;
+
+    bool m_bHasInfusion;
+    uint32 m_uiShadowBoltTimer;
+    uint32 m_uiPortalTimer;
+    bool m_bHasPortal;
+    ObjectGuid m_uiPortalGUID;
+
+    void Reset()
+    {
+        DoCast(m_creature, SPELL_SHADOW_CHANNELING);
+        m_bHasInfusion      = false;
+        m_uiPortalTimer     = urand(20000, 30000);
+        m_uiShadowBoltTimer = 10000;
+        m_bHasPortal        = false;
+        m_uiPortalGUID.Clear();
+        m_uiDecieverDead    = 0;
+
+        if (m_pInstance)
+            m_pInstance->SetData(TYPE_KILJAEDEN_PHASE, PHASE_IDLE);
+            m_pInstance->SetData(TYPE_KILJAEDEN, NOT_STARTED);
+    }
+
+    void Aggro(Unit* pWho)
+    {
+        if (m_pInstance)
+        {
+            m_pInstance->SetData(TYPE_KILJAEDEN, IN_PROGRESS);
+            m_pInstance->SetData(TYPE_KILJAEDEN_PHASE, PHASE_ONE);
+        }
+
+        m_creature->CastStop();
+
+        std::list<Creature*> lDecievers;
+        GetCreatureListWithEntryInGrid(lDecievers, m_creature, NPC_DECIVER, 40.0f);
+        if (!lDecievers.empty())
+        {
+            for(std::list<Creature*>::iterator iter = lDecievers.begin(); iter != lDecievers.end(); ++iter)
+            {
+                if ((*iter) && (*iter)->isAlive())
+                   (*iter)->AI()->AttackStart(pWho);
+            }
+        }
+    }
+
+    void JustDied(Unit* pKiller)
+    {
+        if (++m_uiDecieverDead == 3)
+        {
+            if (m_pInstance)
+            {
+                if (Unit* pKilJaeden = m_pInstance->GetSingleCreatureFromStorage(NPC_KILJAEDEN))
+                {
+                    pKilJaeden->setFaction(14);
+                    pKilJaeden->SetVisibility(VISIBILITY_ON);
+                }
+            }
+        }
+
+        if (Creature* pPortal = m_creature->GetMap()->GetCreature(m_uiPortalGUID))
+            pPortal->ForcedDespawn();
+    }
+
+    void JustReachedHome()
+    {
+        if (m_pInstance)
+        {
+            if (m_pInstance->GetData(TYPE_KILJAEDEN) != NOT_STARTED)
+            {
+                m_pInstance->SetData(TYPE_KILJAEDEN, NOT_STARTED);
+                m_pInstance->SetData(TYPE_KILJAEDEN_PHASE, PHASE_IDLE);
+            }
+        }
+
+        std::list<Creature*> lDecievers;
+        GetCreatureListWithEntryInGrid(lDecievers, m_creature, NPC_DECIVER, 40.0f);
+        if (!lDecievers.empty())
+        {
+            for(std::list<Creature*>::iterator iter = lDecievers.begin(); iter != lDecievers.end(); ++iter)
+            {
+                 if ((*iter) && !(*iter)->isAlive())
+                    (*iter)->Respawn();
+            }
+        }
+    }
+
+    void JustSummoned(Creature* pSummon)
+    {
+        if (pSummon->GetEntry() == NPC_FELFIRE_PORTAL)
+            m_uiPortalGUID = pSummon->GetObjectGuid();
+    }
+
+    void UpdateAI(const uint32 uiDiff)
+    {
+        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+            return;
+
+        if (m_creature->GetHealthPercent() < 20.0f && !m_bHasInfusion)
+        {
+            m_creature->InterruptNonMeleeSpells(true);
+            DoCast(m_creature, SPELL_SHADOW_INFUSION);
+            m_bHasInfusion = true;
+        }
+
+        if (m_uiShadowBoltTimer < uiDiff)
+        {
+            m_creature->InterruptNonMeleeSpells(true);
+            DoCast(m_creature, SPELL_SHADOWBOLT_VOLLEY);
+            m_uiShadowBoltTimer = urand(6000, 10000);
+        }
+        else m_uiShadowBoltTimer -= uiDiff;
+
+        if (m_uiPortalTimer < uiDiff && !m_bHasPortal)
+        {
+            //DoCast(m_creature, SPELL_FELLFIRE_PORTAL);
+            m_creature->SummonCreature(NPC_FELFIRE_PORTAL, 0, 0, 0, 0, TEMPSUMMON_MANUAL_DESPAWN, 0);
+            m_uiPortalTimer = 30000;
+            m_bHasPortal = true;
+        }
+        else m_uiPortalTimer -= uiDiff;
+
+       DoMeleeAttackIfReady();
+    }
+};
+
+CreatureAI* GetAI_mob_deceiver(Creature *pCreature)
+{
+    return new mob_deceiverAI(pCreature);
+}
+
 void AddSC_boss_kiljaeden()
 {
     Script *pNewScript;
@@ -361,5 +503,10 @@ void AddSC_boss_kiljaeden()
     pNewScript = new Script;
     pNewScript->Name="boss_kiljaeden";
     pNewScript->GetAI = &GetAI_boss_kiljaeden;
+    pNewScript->RegisterSelf();
+
+    pNewScript = new Script;
+    pNewScript->Name="mob_deceiver";
+    pNewScript->GetAI = &GetAI_mob_deceiver;
     pNewScript->RegisterSelf();
 }
