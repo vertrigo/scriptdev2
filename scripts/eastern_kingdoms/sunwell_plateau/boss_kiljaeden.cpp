@@ -496,6 +496,62 @@ CreatureAI* GetAI_mob_deceiver(Creature *pCreature)
     return new mob_deceiverAI(pCreature);
 }
 
+/*######
+## mob_shield_orb
+######*/
+
+struct MANGOS_DLL_DECL mob_shield_orbAI : public ScriptedAI
+{
+    mob_shield_orbAI(Creature* pCreature) : ScriptedAI(pCreature)
+    {
+        m_pInstance = ((ScriptedInstance*)pCreature->GetInstanceData());
+        SetCombatMovement(false);
+        Reset();
+    }
+
+    ScriptedInstance* m_pInstance;
+
+    uint32 m_uiMovementTimer;
+    uint32 m_uiMovingSteps;
+
+    void Reset()
+    {
+        DoCast(m_creature, SPELL_SHADOW_ORB_BOLT_TRIGG);
+        m_creature->SetRespawnDelay(DAY);
+        m_uiMovementTimer = 1000 + rand()%2000;
+        m_uiMovingSteps = 0;
+    }
+
+    void UpdateAI(const uint32 uiDiff)
+    {
+        if (m_uiMovementTimer < uiDiff)
+        {
+            if (m_pInstance)
+            {
+                if (Creature* pKiljaeden = m_pInstance->GetSingleCreatureFromStorage(NPC_KILJAEDEN))
+                {
+                    float angle = (M_PI / 10) * m_uiMovingSteps;
+                    float X = pKiljaeden->GetPositionX() + 22 * cos(angle);
+                    float Y = pKiljaeden->GetPositionY() + 22 * sin(angle);
+
+                    m_creature->GetMotionMaster()->MovePoint(0, X, Y, 39.0f);
+
+                    m_uiMovingSteps++;
+                    if (m_uiMovingSteps > 19)
+                        m_uiMovingSteps = 0;
+                }
+            }
+            m_uiMovementTimer = 500;
+        }
+        else m_uiMovementTimer -= uiDiff;
+    }
+};
+
+CreatureAI* GetAI_mob_shield_orb(Creature *pCreature)
+{
+    return new mob_shield_orbAI(pCreature);
+}
+
 void AddSC_boss_kiljaeden()
 {
     Script *pNewScript;
@@ -509,4 +565,11 @@ void AddSC_boss_kiljaeden()
     pNewScript->Name="mob_deceiver";
     pNewScript->GetAI = &GetAI_mob_deceiver;
     pNewScript->RegisterSelf();
+
+    pNewScript = new Script;
+    pNewScript->Name="mob_shield_orb";
+    pNewScript->GetAI = &GetAI_mob_shield_orb;
+    pNewScript->RegisterSelf();
+
+    
 }
