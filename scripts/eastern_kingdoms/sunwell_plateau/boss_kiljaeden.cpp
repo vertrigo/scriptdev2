@@ -35,14 +35,14 @@ enum UsedSpells
     SPELL_REBIRTH               = 44200, // Emerge from the Sunwell
     SPELL_DESTROY_DRAKES        = 46707,
 
-    // phase 2
+    // phase 1
     SPELL_SOULFLY               = 45442,  // 9k Shadow damage over 3 seconds. Spammed throughout all the fight.
     SPELL_SOUL_FLAY_SLOW        = 47106,
     SPELL_LEGION_LIGHTING       = 45664,  // Chain Lightning, 4 targets, ~3k Shadow damage, 1.5fk mana burn
     SPELL_FIREBLOOM             = 45641,  // Places a debuff on 5 raid members, which causes them to deal 2k Fire damage to nearby allies and selves. MIGHT NOT WORK
     //SPELL_FIREBLOOM_EFF         = 45642, // 100% Damage
 
-    // phase 3
+    // phase 2
     SPELL_SINISTER_REFLECTION   = 45892,
     //SPELL_SINISTER_REFLECTION = 45785, // Summon shadow copies of 5 raid members that fight against KJ's enemies//dont work
     SPELL_COPY_WEAPON           = 41055, // }
@@ -60,7 +60,7 @@ enum UsedSpells
     SPELL_DARKNESS_EXPLOSION    = 45657,
     SPELL_DARKNESS_OF_SOULS     = 46605,  // Begins a 8-second channeling, after which he will deal 50,000 damage to the raid
 
-    // phase 4
+    // phase 3
     SPELL_ARMAGEDDON_TRIGG      = 45921,
     SPELL_ARMAGEDDON_VISUAL     = 45909,
     //SPELL_ARMAGEDDON_EFFECT     = 24207, // MIGHT BE CORRECT VISUAL
@@ -77,7 +77,7 @@ enum UsedSpells
     SPELL_ARMAGEDDON_DAMAGE                     = 45915, // This does the area damage
 */
 
-    // phase 5
+    // phase 4
     // Same spells with lower timers
 
     //Hand of the Deceiver Spells
@@ -187,13 +187,13 @@ enum Texts
 
     // Kalecgos - Anveena speech
     SAY_KALECGOS_INTRO                      = -1580080,
-    // phase 3
+    // phase 2
     SAY_KALECGOS_AWAKEN                     = -1580081,
     SAY_ANVEENA_IMPRISONED                  = -1580082,
-    // phase 4
+    // phase 3
     SAY_KALECGOS_LETGO                      = -1580083,
     SAY_ANVEENA_LOST                        = -1580084,
-    // phase 5
+    // phase 4
     SAY_KALECGOS_FOCUS                      = -1580085,
     SAY_ANVEENA_KALEC                       = -1580086,
     SAY_KALECGOS_FATE                       = -1580087,
@@ -226,11 +226,10 @@ enum Texts
 enum Phazes
 {
     PHASE_IDLE  = 0,  // phase which kil jaedan is yelling awhile players goes thur instance
-    PHASE_ONE   = 1,  //  unsure how im gonna use this might have to rewrite the phase layout
+    PHASE_ONE   = 1,  // kil starts his attack spells
     PHASE_TWO   = 2,
     PHASE_THREE = 3,
     PHASE_FOUR  = 4,
-    PHASE_FIVE  = 5,
     PHASE_OUTRO = 6,
 };
 
@@ -257,19 +256,35 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
 
 // Phase Idle
     uint32 m_uiOrdersTimer;
+  // decievers this phase
 
-// Phase One 
+// Phase One
+    uint32 m_uiSoulFlyTimer;
+    uint32 m_uiLegionLightingTimer;
+    uint32 m_uiFireBloomTimer;
+    uint32 m_uiShieldOrbTimer;
+    uint32 m_uiMaxShieldOrbs;
+// Phase Two
+
+//Phase Three
 
     void Reset()
     {
 // Special Timers and Stuff Reset
         m_uiPhase               = PHASE_IDLE;
+        m_uiDecieverDead        = 0;
 
 // Phase Idle
-        m_uiOrdersTimer        = 10000;
+        m_uiOrdersTimer         = 10000;
 
 // Phase One 
-        m_uiDecieverDead       = 0;
+        m_uiSoulFlyTimer          = 5000;
+        m_uiLegionLightingTimer   = 10000;
+        m_uiFireBloomTimer        = 20000;
+        m_uiShieldOrbTimer        = 25000;
+        m_uiMaxShieldOrbs         = 1;
+// Phase Two
+
     }
 
     void Aggro(Unit* pWho)
@@ -330,9 +345,10 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
 
     void UpdateAI(const uint32 uiDiff)
     {
+// Phase_Idle
         if (m_uiPhase == PHASE_IDLE)
         {
-           if (m_uiOrdersTimer < uiDiff)
+            if (m_uiOrdersTimer < uiDiff)
             {
                 switch (rand()%5)
                 {
@@ -347,6 +363,23 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
             else m_uiOrdersTimer -= uiDiff;
             // break;   // might be needed went know till play testing
         }
+
+        if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
+            return;
+
+  // soul flay all phases
+        if (m_uiSoulFlayTimer < uiDiff)
+        {
+            DoCast(m_creature->getVictim(), SPELL_SOULFLAY);
+            m_uiSoulFlayTimer = 7000;
+        }else m_uiSoulFlayTimer -= uiDiff;
+
+// Phase_One
+        if (m_uiPhase == PHASE_ONE)
+        {
+        }
+            
+        
     }
 
 CreatureAI* GetAI_boss_kiljaeden(Creature *pCreature)
