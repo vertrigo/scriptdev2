@@ -230,7 +230,7 @@ enum Phazes
     PHASE_TWO   = 2,
     PHASE_THREE = 3,
     PHASE_FOUR  = 4,
-    PHASE_OUTRO = 6,
+    PHASE_OUTRO = 5,
 };
 
 uint8 m_uiDecieverDead;
@@ -251,6 +251,14 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
 
     //timers,bools,ect\\
 
+// All Phases
+    uint32 m_uiSoulFlyTimer;
+    uint32 m_uiLegionLightingTimer;
+    uint32 m_uiFireBloomCheck;
+    uint32 m_uiFireBloomTimer;
+    uint32 m_uiFireBloomCount;
+    ObjectGuid m_uiFireBloomTarget[5];
+
 //phase holder
     uint8 m_uiPhase;
 
@@ -259,9 +267,6 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
   // decievers this phase
 
 // Phase One
-    uint32 m_uiSoulFlyTimer;
-    uint32 m_uiLegionLightingTimer;
-    uint32 m_uiFireBloomTimer;
     uint32 m_uiShieldOrbTimer;
     uint32 m_uiMaxShieldOrbs;
 // Phase Two
@@ -271,18 +276,23 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
     void Reset()
     {
 // Special Timers and Stuff Reset
-        m_uiPhase               = PHASE_IDLE;
-        m_uiDecieverDead        = 0;
+        m_uiPhase                 = PHASE_IDLE;
+        m_uiDecieverDead          = 0;
 
-// Phase Idle
-        m_uiOrdersTimer         = 10000;
-
-// Phase One 
+// All Phases
         m_uiSoulFlyTimer          = 5000;
         m_uiLegionLightingTimer   = 10000;
-        m_uiFireBloomTimer        = 20000;
+        m_uiFireBloomCheck        = 2000;
+        m_uiFireBloomTimer        = 30000;
+        m_uiFireBloomCount        = 10;
+
+// Phase Idle
+        m_uiOrdersTimer           = 10000;
+
+// Phase One 
         m_uiShieldOrbTimer        = 25000;
         m_uiMaxShieldOrbs         = 1;
+
 // Phase Two
 
     }
@@ -368,6 +378,39 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
             return;
 
   // soul flay all phases
+        if (m_uiLegionLightingTimer < uiDiff)
+        {
+            DoCast(m_creature->getVictim(), SPELL_LEGION_LIGHTING);
+            m_uiLegionLightingTimer = 11000;
+        }else m_uiLegionLightingTimer -= uiDiff;
+
+        //FireBloom Damage WorkArround
+        if (m_uiFireBloomCheck < diff)
+        {
+            if (m_uiFireBloomCount < 10)
+                for (uint8 i=0; i<5; ++i)
+                {
+                    if (Unit* FireTarget = m_creature->GetMap()->GetUnit(m_uiFireBloomTarget[i]))
+                        FireTarget->CastSpell(FireTarget, SPELL_FIREBLOOM_EFF, true);
+                }
+            ++m_uiFireBloomCount;
+            m_uiFireBloomCheck = 2000;
+        }else m_uiFireBloomCheck -= diff;
+
+		// fire bloom all phases
+        if (m_uiFireBloomTimer < uiDiff)
+        {
+            for (uint8 i=0; i<5; ++i)
+            {
+                Unit* target = m_creature->SelectAttackingTarget(ATTACKING_TARGET_RANDOM, 0);
+                m_uiFireBloomTarget[i] = target->GetObjectGuid();
+                m_uiFireBloomCount = 0;
+                //DoCast(target, SPELL_FIREBLOOM, true);
+            }
+            m_uiFireBloomTimer = 25000;
+        }else m_uiFireBloomTimer -= uiDiff;
+
+		// soul flay all phases
         if (m_uiSoulFlayTimer < uiDiff)
         {
             DoCast(m_creature->getVictim(), SPELL_SOULFLAY);
@@ -377,6 +420,21 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
 // Phase_One
         if (m_uiPhase == PHASE_ONE)
         {
+            if (m_uiShieldOrbTimer < uiDiff)
+            {
+                for(uint8 i = 0; i < m_uiMaxShieldOrbs; ++i)
+                {
+                    float angle = (float) rand()*360/RAND_MAX + 1;
+                    float homeX = m_creature->GetPositionX() + 20*cos(angle*(M_PI/180));
+                    float homeY = m_creature->GetPositionY() + 20*sin(angle*(M_PI/180));
+                    m_creature->SummonCreature(NPC_SHIELD_ORB, homeX, homeY, m_creature->GetPositionZ()+15, 0, TEMPSUMMON_TIMED_DESPAWN_OUT_OF_COMBAT, 15000);
+                }
+                m_uiShieldOrbTimer = 50000;
+            }
+            else m_uiShieldOrbTimer -= uiDiff;
+
+            //if (m_creature->GetHealthPercent() < 85.0f)
+                //m_uiPhase = PHASE_TWO;
         }
             
         
