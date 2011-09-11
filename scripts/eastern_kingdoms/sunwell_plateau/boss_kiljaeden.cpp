@@ -36,11 +36,11 @@ enum UsedSpells
     SPELL_DESTROY_DRAKES        = 46707,
 
     // phase 1
-    SPELL_SOULFLY               = 45442,  // 9k Shadow damage over 3 seconds. Spammed throughout all the fight.
+    SPELL_SOULFLAY              = 45442,  // 9k Shadow damage over 3 seconds. Spammed throughout all the fight.
     SPELL_SOUL_FLAY_SLOW        = 47106,
     SPELL_LEGION_LIGHTING       = 45664,  // Chain Lightning, 4 targets, ~3k Shadow damage, 1.5fk mana burn
     SPELL_FIREBLOOM             = 45641,  // Places a debuff on 5 raid members, which causes them to deal 2k Fire damage to nearby allies and selves. MIGHT NOT WORK
-    //SPELL_FIREBLOOM_EFF         = 45642, // 100% Damage
+    SPELL_FIREBLOOM_EFF         = 45642, // 100% Damage
 
     // phase 2
     SPELL_SINISTER_REFLECTION   = 45892,
@@ -252,7 +252,7 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
     //timers,bools,ect\\
 
 // All Phases
-    uint32 m_uiSoulFlyTimer;
+    uint32 m_uiSoulFlayTimer;
     uint32 m_uiLegionLightingTimer;
     uint32 m_uiFireBloomCheck;
     uint32 m_uiFireBloomTimer;
@@ -280,7 +280,7 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
         m_uiDecieverDead          = 0;
 
 // All Phases
-        m_uiSoulFlyTimer          = 5000;
+        m_uiSoulFlayTimer         = 5000;
         m_uiLegionLightingTimer   = 10000;
         m_uiFireBloomCheck        = 2000;
         m_uiFireBloomTimer        = 30000;
@@ -385,7 +385,7 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
         }else m_uiLegionLightingTimer -= uiDiff;
 
         //FireBloom Damage WorkArround
-        if (m_uiFireBloomCheck < diff)
+        if (m_uiFireBloomCheck < uiDiff)
         {
             if (m_uiFireBloomCount < 10)
                 for (uint8 i=0; i<5; ++i)
@@ -395,7 +395,7 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
                 }
             ++m_uiFireBloomCount;
             m_uiFireBloomCheck = 2000;
-        }else m_uiFireBloomCheck -= diff;
+        }else m_uiFireBloomCheck -= uiDiff;
 
 		// fire bloom all phases
         if (m_uiFireBloomTimer < uiDiff)
@@ -439,6 +439,7 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
             
         
     }
+};
 
 CreatureAI* GetAI_boss_kiljaeden(Creature *pCreature)
 {
