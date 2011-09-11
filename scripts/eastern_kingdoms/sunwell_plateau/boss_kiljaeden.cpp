@@ -295,6 +295,15 @@ struct MANGOS_DLL_DECL boss_kiljaedenAI : public Scripted_NoMovementAI
 
 // Phase Two
 
+// Kil Jaed resets
+        m_creature->SetVisibility(VISIBILITY_OFF);
+        m_creature->setFaction(35);
+
+        if (!m_creature->HasAura(SPELL_SUNWELL_RADIANCE_AURA,  EFFECT_INDEX_0))
+             m_creature->CastSpell(m_creature, SPELL_SUNWELL_RADIANCE_AURA, true);
+
+        // if (m_creature->HasAura(SPELL_SACRIFICE_OF_ANVEENA,  EFFECT_INDEX_0))
+            // m_creature->RemoveAurasDueToSpell(SPELL_SACRIFICE_OF_ANVEENA,0);
     }
 
     void Aggro(Unit* pWho)
