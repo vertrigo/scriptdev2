@@ -209,6 +209,7 @@ struct MANGOS_DLL_DECL advisorbase_ai : public ScriptedAI
         m_bDoubled_Health = true;
         m_creature->SetHealth(m_creature->GetMaxHealth());
         m_creature->SetStandState(UNIT_STAND_STATE_STAND);
+        m_creature->RemoveFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
 
         DoCastSpellIfCan(m_creature, SPELL_RES_VISUAL);
         m_uiDelayRes_Timer = 2000;
